@@ -1,0 +1,104 @@
+{
+  "name": "Radiology Triage Alert Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "triage-alert",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook_node",
+      "name": "Triage Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"triage_level\"]}}",
+              "operation": "equal",
+              "value2": "CRITICAL"
+            }
+          ]
+        }
+      },
+      "id": "if_node",
+      "name": "Check Critical Case",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/notify-patient",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={\n  \"patient_name\": $json[\"patient_name\"],\n  \"message\": \"Your radiology report requires urgent medical attention. Please contact your doctor immediately.\"\n}"
+      },
+      "id": "notify_node",
+      "name": "Send Patient Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        700,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{ json: { alert: \"Critical radiology case detected\", patient: $json.patient_name, disease: $json.disease, confidence: $json.confidence }}];"
+      },
+      "id": "log_node",
+      "name": "Log Critical Case",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        700,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Triage Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check Critical Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Critical Case": {
+      "main": [
+        [
+          {
+            "node": "Send Patient Notification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Critical Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false
+}
